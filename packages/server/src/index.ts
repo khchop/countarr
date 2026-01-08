@@ -81,6 +81,8 @@ async function initDatabase() {
       download_client TEXT,
       source_app TEXT NOT NULL,
       quality_score INTEGER,
+      is_upgrade INTEGER DEFAULT 0,
+      previous_size_bytes INTEGER,
       raw_data TEXT
     )
   `);
@@ -151,6 +153,8 @@ async function initDatabase() {
       media_item_id INTEGER NOT NULL REFERENCES media_items(id) ON DELETE CASCADE,
       episode_id INTEGER REFERENCES episodes(id) ON DELETE CASCADE,
       external_id TEXT,
+      user_id TEXT,
+      user_name TEXT,
       started_at TEXT NOT NULL,
       ended_at TEXT,
       play_duration_seconds INTEGER NOT NULL DEFAULT 0,
@@ -248,6 +252,45 @@ async function initDatabase() {
       last_history_id INTEGER,
       status TEXT NOT NULL DEFAULT 'idle',
       error TEXT
+    )
+  `);
+
+  await db.run(sql`
+    CREATE TABLE IF NOT EXISTS discord_webhooks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      webhook_url TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      send_daily INTEGER NOT NULL DEFAULT 1,
+      send_weekly INTEGER NOT NULL DEFAULT 1,
+      send_monthly INTEGER NOT NULL DEFAULT 1,
+      send_yearly INTEGER NOT NULL DEFAULT 1,
+      include_movies INTEGER NOT NULL DEFAULT 1,
+      include_tv INTEGER NOT NULL DEFAULT 1,
+      include_subtitles INTEGER NOT NULL DEFAULT 1,
+      include_playback INTEGER NOT NULL DEFAULT 1,
+      include_indexers INTEGER NOT NULL DEFAULT 1,
+      include_release_groups INTEGER NOT NULL DEFAULT 1,
+      include_genres INTEGER NOT NULL DEFAULT 1,
+      include_quirky INTEGER NOT NULL DEFAULT 1,
+      mention_role_id TEXT,
+      mention_user_id TEXT,
+      mention_only_yearly INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      last_sent_at TEXT
+    )
+  `);
+
+  await db.run(sql`
+    CREATE TABLE IF NOT EXISTS discord_schedule (
+      id TEXT PRIMARY KEY,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      hour INTEGER NOT NULL DEFAULT 23,
+      minute INTEGER NOT NULL DEFAULT 0,
+      day_of_week INTEGER,
+      day_of_month INTEGER,
+      month INTEGER
     )
   `);
 
