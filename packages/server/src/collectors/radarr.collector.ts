@@ -5,9 +5,11 @@ import { parseQuality, parseReleaseGroup } from '../utils/quality-parser.js';
 
 export class RadarrCollector {
   private client: RadarrClient;
+  private connectionId: number;
 
-  constructor(url: string, apiKey: string) {
+  constructor(url: string, apiKey: string, connectionId: number) {
     this.client = new RadarrClient({ baseUrl: url, apiKey });
+    this.connectionId = connectionId;
   }
 
   async testConnection(): Promise<{ success: boolean; error?: string; version?: string }> {
@@ -95,7 +97,7 @@ export class RadarrCollector {
   private async upsertMovie(movie: RadarrMovie): Promise<number> {
     const existing = await db.query.mediaItems.findFirst({
       where: and(
-        eq(schema.mediaItems.source, 'radarr'),
+        eq(schema.mediaItems.connectionId, this.connectionId),
         eq(schema.mediaItems.externalId, String(movie.id))
       ),
     });
@@ -105,6 +107,7 @@ export class RadarrCollector {
 
     const data = {
       externalId: String(movie.id),
+      connectionId: this.connectionId,
       source: 'radarr' as const,
       type: 'movie' as const,
       title: movie.title,
@@ -180,6 +183,7 @@ export class RadarrCollector {
     await db.insert(schema.downloadEvents).values({
       mediaItemId,
       episodeId: null,
+      connectionId: this.connectionId,
       eventType: this.mapEventType(record.eventType),
       timestamp: record.date,
       sizeBytes,
@@ -214,7 +218,7 @@ export class RadarrCollector {
 
   async getLastSyncedHistoryDate(): Promise<string | null> {
     const lastEvent = await db.query.downloadEvents.findFirst({
-      where: eq(schema.downloadEvents.sourceApp, 'radarr'),
+      where: eq(schema.downloadEvents.connectionId, this.connectionId),
       orderBy: [desc(schema.downloadEvents.timestamp)],
     });
     return lastEvent?.timestamp ?? null;

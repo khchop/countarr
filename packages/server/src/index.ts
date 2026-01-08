@@ -16,11 +16,35 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 async function initDatabase() {
   console.log('Initializing database...');
   
+  // Create service_connections table FIRST (other tables reference it)
+  await db.run(sql`
+    CREATE TABLE IF NOT EXISTS service_connections (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      url TEXT NOT NULL,
+      api_key TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      is_default INTEGER NOT NULL DEFAULT 0,
+      last_test_at TEXT,
+      last_test_success INTEGER,
+      last_test_error TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    )
+  `);
+
+  await db.run(sql`
+    CREATE INDEX IF NOT EXISTS service_connections_type_idx 
+    ON service_connections(type)
+  `);
+
   // Create tables if they don't exist
   await db.run(sql`
     CREATE TABLE IF NOT EXISTS media_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       external_id TEXT NOT NULL,
+      connection_id INTEGER REFERENCES service_connections(id) ON DELETE SET NULL,
       source TEXT NOT NULL,
       type TEXT NOT NULL,
       title TEXT NOT NULL,
@@ -38,9 +62,19 @@ async function initDatabase() {
     )
   `);
 
+  // Add connection_id column if it doesn't exist (migration for existing DBs)
+  try {
+    await db.run(sql`ALTER TABLE media_items ADD COLUMN connection_id INTEGER REFERENCES service_connections(id) ON DELETE SET NULL`);
+  } catch { /* Column already exists */ }
+
   await db.run(sql`
-    CREATE UNIQUE INDEX IF NOT EXISTS media_items_source_external_idx 
-    ON media_items(source, external_id)
+    CREATE INDEX IF NOT EXISTS media_items_connection_idx 
+    ON media_items(connection_id)
+  `);
+
+  await db.run(sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS media_items_connection_external_idx 
+    ON media_items(connection_id, external_id)
   `);
 
   await db.run(sql`
@@ -67,6 +101,7 @@ async function initDatabase() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       media_item_id INTEGER NOT NULL REFERENCES media_items(id) ON DELETE CASCADE,
       episode_id INTEGER REFERENCES episodes(id) ON DELETE CASCADE,
+      connection_id INTEGER REFERENCES service_connections(id) ON DELETE SET NULL,
       event_type TEXT NOT NULL,
       timestamp TEXT NOT NULL,
       size_bytes INTEGER NOT NULL DEFAULT 0,
@@ -86,6 +121,11 @@ async function initDatabase() {
       raw_data TEXT
     )
   `);
+
+  // Add connection_id column if it doesn't exist (migration for existing DBs)
+  try {
+    await db.run(sql`ALTER TABLE download_events ADD COLUMN connection_id INTEGER REFERENCES service_connections(id) ON DELETE SET NULL`);
+  } catch { /* Column already exists */ }
 
   await db.run(sql`
     CREATE INDEX IF NOT EXISTS download_events_media_item_idx 
@@ -132,6 +172,17 @@ async function initDatabase() {
     ON download_events(source_app, media_item_id, timestamp, event_type)
   `);
 
+  // Index for connection-based queries
+  await db.run(sql`
+    CREATE INDEX IF NOT EXISTS download_events_connection_idx 
+    ON download_events(connection_id)
+  `);
+
+  await db.run(sql`
+    CREATE INDEX IF NOT EXISTS download_events_connection_timestamp_idx 
+    ON download_events(connection_id, timestamp)
+  `);
+
   await db.run(sql`
     CREATE TABLE IF NOT EXISTS requests (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -152,6 +203,7 @@ async function initDatabase() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       media_item_id INTEGER NOT NULL REFERENCES media_items(id) ON DELETE CASCADE,
       episode_id INTEGER REFERENCES episodes(id) ON DELETE CASCADE,
+      connection_id INTEGER REFERENCES service_connections(id) ON DELETE SET NULL,
       external_id TEXT,
       user_id TEXT,
       user_name TEXT,
@@ -164,9 +216,19 @@ async function initDatabase() {
     )
   `);
 
+  // Add connection_id column if it doesn't exist (migration for existing DBs)
+  try {
+    await db.run(sql`ALTER TABLE playback_events ADD COLUMN connection_id INTEGER REFERENCES service_connections(id) ON DELETE SET NULL`);
+  } catch { /* Column already exists */ }
+
   await db.run(sql`
     CREATE INDEX IF NOT EXISTS playback_events_media_item_idx 
     ON playback_events(media_item_id)
+  `);
+
+  await db.run(sql`
+    CREATE INDEX IF NOT EXISTS playback_events_connection_idx 
+    ON playback_events(connection_id)
   `);
 
   await db.run(sql`
@@ -174,6 +236,7 @@ async function initDatabase() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       media_item_id INTEGER NOT NULL REFERENCES media_items(id) ON DELETE CASCADE,
       episode_id INTEGER REFERENCES episodes(id) ON DELETE CASCADE,
+      connection_id INTEGER REFERENCES service_connections(id) ON DELETE SET NULL,
       language TEXT NOT NULL,
       provider TEXT NOT NULL,
       timestamp TEXT NOT NULL,
@@ -181,9 +244,20 @@ async function initDatabase() {
     )
   `);
 
+  // Add connection_id column if it doesn't exist (migration for existing DBs)
+  try {
+    await db.run(sql`ALTER TABLE subtitle_events ADD COLUMN connection_id INTEGER REFERENCES service_connections(id) ON DELETE SET NULL`);
+  } catch { /* Column already exists */ }
+
+  await db.run(sql`
+    CREATE INDEX IF NOT EXISTS subtitle_events_connection_idx 
+    ON subtitle_events(connection_id)
+  `);
+
   await db.run(sql`
     CREATE TABLE IF NOT EXISTS indexer_stats (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      connection_id INTEGER REFERENCES service_connections(id) ON DELETE SET NULL,
       indexer_name TEXT NOT NULL,
       date TEXT NOT NULL,
       searches INTEGER NOT NULL DEFAULT 0,
@@ -193,9 +267,14 @@ async function initDatabase() {
     )
   `);
 
+  // Add connection_id column if it doesn't exist (migration for existing DBs)
+  try {
+    await db.run(sql`ALTER TABLE indexer_stats ADD COLUMN connection_id INTEGER REFERENCES service_connections(id) ON DELETE SET NULL`);
+  } catch { /* Column already exists */ }
+
   await db.run(sql`
-    CREATE UNIQUE INDEX IF NOT EXISTS indexer_stats_name_date_idx 
-    ON indexer_stats(indexer_name, date)
+    CREATE INDEX IF NOT EXISTS indexer_stats_connection_idx 
+    ON indexer_stats(connection_id)
   `);
 
   // Index for date range queries on indexer stats
@@ -214,28 +293,6 @@ async function initDatabase() {
       episodes_added INTEGER NOT NULL DEFAULT 0,
       avg_quality_score REAL
     )
-  `);
-
-  await db.run(sql`
-    CREATE TABLE IF NOT EXISTS service_connections (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      type TEXT NOT NULL,
-      url TEXT NOT NULL,
-      api_key TEXT NOT NULL,
-      enabled INTEGER NOT NULL DEFAULT 1,
-      is_default INTEGER NOT NULL DEFAULT 0,
-      last_test_at TEXT,
-      last_test_success INTEGER,
-      last_test_error TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    )
-  `);
-
-  await db.run(sql`
-    CREATE INDEX IF NOT EXISTS service_connections_type_idx 
-    ON service_connections(type)
   `);
 
   await db.run(sql`

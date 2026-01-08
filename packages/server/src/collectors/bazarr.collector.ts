@@ -4,9 +4,11 @@ import { BazarrClient, BazarrHistoryRecord } from '../clients/bazarr.js';
 
 export class BazarrCollector {
   private client: BazarrClient;
+  private connectionId: number;
 
-  constructor(url: string, apiKey: string) {
+  constructor(url: string, apiKey: string, connectionId: number) {
     this.client = new BazarrClient({ baseUrl: url, apiKey });
+    this.connectionId = connectionId;
   }
 
   async testConnection(): Promise<{ success: boolean; error?: string; version?: string }> {
@@ -113,6 +115,7 @@ export class BazarrCollector {
     await db.insert(schema.subtitleEvents).values({
       mediaItemId: mediaItem.id,
       episodeId: null,
+      connectionId: this.connectionId,
       language: languageCode,
       provider: record.provider ?? 'unknown',
       timestamp,
@@ -161,6 +164,7 @@ export class BazarrCollector {
     await db.insert(schema.subtitleEvents).values({
       mediaItemId: mediaItem.id,
       episodeId: episode?.id ?? null,
+      connectionId: this.connectionId,
       language: languageCode,
       provider: record.provider ?? 'unknown',
       timestamp,
@@ -170,6 +174,7 @@ export class BazarrCollector {
 
   async getLastSyncedDate(): Promise<string | null> {
     const lastEvent = await db.query.subtitleEvents.findFirst({
+      where: eq(schema.subtitleEvents.connectionId, this.connectionId),
       orderBy: [desc(schema.subtitleEvents.timestamp)],
     });
     return lastEvent?.timestamp ?? null;

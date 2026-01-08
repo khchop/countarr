@@ -4,9 +4,11 @@ import { JellyseerrClient, JellyseerrRequest, JELLYSEERR_STATUS } from '../clien
 
 export class JellyseerrCollector {
   private client: JellyseerrClient;
+  private connectionId: number;
 
-  constructor(url: string, apiKey: string) {
+  constructor(url: string, apiKey: string, connectionId: number) {
     this.client = new JellyseerrClient({ baseUrl: url, apiKey });
+    this.connectionId = connectionId;
   }
 
   async testConnection(): Promise<{ success: boolean; error?: string; version?: string }> {

@@ -5,9 +5,11 @@ import { parseQuality, parseReleaseGroup } from '../utils/quality-parser.js';
 
 export class SonarrCollector {
   private client: SonarrClient;
+  private connectionId: number;
 
-  constructor(url: string, apiKey: string) {
+  constructor(url: string, apiKey: string, connectionId: number) {
     this.client = new SonarrClient({ baseUrl: url, apiKey });
+    this.connectionId = connectionId;
   }
 
   async testConnection(): Promise<{ success: boolean; error?: string; version?: string }> {
@@ -95,7 +97,7 @@ export class SonarrCollector {
   private async upsertSeries(series: SonarrSeries): Promise<number> {
     const existing = await db.query.mediaItems.findFirst({
       where: and(
-        eq(schema.mediaItems.source, 'sonarr'),
+        eq(schema.mediaItems.connectionId, this.connectionId),
         eq(schema.mediaItems.externalId, String(series.id))
       ),
     });
@@ -105,6 +107,7 @@ export class SonarrCollector {
 
     const data = {
       externalId: String(series.id),
+      connectionId: this.connectionId,
       source: 'sonarr' as const,
       type: 'series' as const,
       title: series.title,
@@ -229,6 +232,7 @@ export class SonarrCollector {
     await db.insert(schema.downloadEvents).values({
       mediaItemId,
       episodeId,
+      connectionId: this.connectionId,
       eventType: this.mapEventType(record.eventType),
       timestamp: record.date,
       sizeBytes,
@@ -264,7 +268,7 @@ export class SonarrCollector {
 
   async getLastSyncedHistoryDate(): Promise<string | null> {
     const lastEvent = await db.query.downloadEvents.findFirst({
-      where: eq(schema.downloadEvents.sourceApp, 'sonarr'),
+      where: eq(schema.downloadEvents.connectionId, this.connectionId),
       orderBy: [desc(schema.downloadEvents.timestamp)],
     });
     return lastEvent?.timestamp ?? null;

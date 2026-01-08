@@ -4,9 +4,11 @@ import { ProwlarrClient, ProwlarrHistoryRecord } from '../clients/prowlarr.js';
 
 export class ProwlarrCollector {
   private client: ProwlarrClient;
+  private connectionId: number;
 
-  constructor(url: string, apiKey: string) {
+  constructor(url: string, apiKey: string, connectionId: number) {
     this.client = new ProwlarrClient({ baseUrl: url, apiKey });
+    this.connectionId = connectionId;
   }
 
   async testConnection(): Promise<{ success: boolean; error?: string; version?: string }> {
@@ -29,12 +31,14 @@ export class ProwlarrCollector {
           // Upsert daily stats for each indexer
           const existing = await db.query.indexerStats.findFirst({
             where: and(
+              eq(schema.indexerStats.connectionId, this.connectionId),
               eq(schema.indexerStats.indexerName, indexer.indexerName),
               eq(schema.indexerStats.date, today)
             ),
           });
 
           const data = {
+            connectionId: this.connectionId,
             indexerName: indexer.indexerName,
             date: today,
             searches: indexer.numberOfQueries + indexer.numberOfRssQueries,
@@ -128,6 +132,7 @@ export class ProwlarrCollector {
 
     const existing = await db.query.indexerStats.findFirst({
       where: and(
+        eq(schema.indexerStats.connectionId, this.connectionId),
         eq(schema.indexerStats.indexerName, indexerName),
         eq(schema.indexerStats.date, date)
       ),
@@ -145,6 +150,7 @@ export class ProwlarrCollector {
         .where(eq(schema.indexerStats.id, existing.id));
     } else {
       await db.insert(schema.indexerStats).values({
+        connectionId: this.connectionId,
         indexerName,
         date,
         searches: 0,

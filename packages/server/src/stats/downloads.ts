@@ -1,5 +1,5 @@
 import { db, schema } from '../db/index.js';
-import { sql, eq, and, gte, lte, desc, count, sum } from 'drizzle-orm';
+import { sql, eq, and, gte, lte, desc, count, sum, isNull } from 'drizzle-orm';
 import type { TimeSeriesData, PieChartData } from '@countarr/shared';
 
 export interface DownloadStatsParams {
@@ -7,17 +7,38 @@ export interface DownloadStatsParams {
   endDate: string;
 }
 
+// Color palette for multiple connections
+const CONNECTION_COLORS = [
+  '#ffc107', // Yellow (Radarr-like)
+  '#3498db', // Blue (Sonarr-like)
+  '#e74c3c', // Red
+  '#2ecc71', // Green
+  '#9b59b6', // Purple
+  '#f39c12', // Orange
+  '#1abc9c', // Teal
+  '#34495e', // Dark blue-gray
+  '#e91e63', // Pink
+  '#00bcd4', // Cyan
+];
+
 export async function getDownloadsByDay(params: DownloadStatsParams): Promise<TimeSeriesData[]> {
   const { startDate, endDate } = params;
 
+  // Query with LEFT JOIN to get connection names
   const results = await db
     .select({
       date: sql<string>`date(${schema.downloadEvents.timestamp})`.as('date'),
+      connectionId: schema.downloadEvents.connectionId,
+      connectionName: schema.serviceConnections.name,
       sourceApp: schema.downloadEvents.sourceApp,
       count: count(),
       totalBytes: sum(schema.downloadEvents.sizeBytes),
     })
     .from(schema.downloadEvents)
+    .leftJoin(
+      schema.serviceConnections,
+      eq(schema.downloadEvents.connectionId, schema.serviceConnections.id)
+    )
     .where(
       and(
         gte(schema.downloadEvents.timestamp, startDate),
@@ -25,32 +46,36 @@ export async function getDownloadsByDay(params: DownloadStatsParams): Promise<Ti
         eq(schema.downloadEvents.eventType, 'downloaded')
       )
     )
-    .groupBy(sql`date(${schema.downloadEvents.timestamp})`, schema.downloadEvents.sourceApp)
+    .groupBy(
+      sql`date(${schema.downloadEvents.timestamp})`,
+      schema.downloadEvents.connectionId
+    )
     .orderBy(sql`date(${schema.downloadEvents.timestamp})`);
 
-  // Group by source app for stacked chart
-  const byApp: Record<string, TimeSeriesData> = {};
-  const colors: Record<string, string> = {
-    radarr: '#ffc107',
-    sonarr: '#3498db',
-  };
+  // Group by connection for stacked chart
+  const byConnection: Record<string, TimeSeriesData> = {};
+  let colorIndex = 0;
 
   for (const row of results) {
-    const app = row.sourceApp;
-    if (!byApp[app]) {
-      byApp[app] = {
-        label: app.charAt(0).toUpperCase() + app.slice(1),
+    // Use connection name if available, fallback to sourceApp type
+    const key = row.connectionId?.toString() ?? row.sourceApp;
+    const label = row.connectionName ?? (row.sourceApp.charAt(0).toUpperCase() + row.sourceApp.slice(1));
+    
+    if (!byConnection[key]) {
+      byConnection[key] = {
+        label,
         data: [],
-        color: colors[app] ?? '#888',
+        color: CONNECTION_COLORS[colorIndex % CONNECTION_COLORS.length],
       };
+      colorIndex++;
     }
-    byApp[app].data.push({
+    byConnection[key].data.push({
       timestamp: row.date,
       value: Number(row.count),
     });
   }
 
-  return Object.values(byApp);
+  return Object.values(byConnection);
 }
 
 export async function getDownloadSizeByDay(params: DownloadStatsParams): Promise<TimeSeriesData[]> {
@@ -146,12 +171,19 @@ export async function getDownloadsByDayOfWeek(params: DownloadStatsParams): Prom
 export async function getDownloadsByApp(params: DownloadStatsParams): Promise<PieChartData[]> {
   const { startDate, endDate } = params;
 
+  // Query with LEFT JOIN to get connection names
   const results = await db
     .select({
+      connectionId: schema.downloadEvents.connectionId,
+      connectionName: schema.serviceConnections.name,
       sourceApp: schema.downloadEvents.sourceApp,
       count: count(),
     })
     .from(schema.downloadEvents)
+    .leftJoin(
+      schema.serviceConnections,
+      eq(schema.downloadEvents.connectionId, schema.serviceConnections.id)
+    )
     .where(
       and(
         gte(schema.downloadEvents.timestamp, startDate),
@@ -159,17 +191,12 @@ export async function getDownloadsByApp(params: DownloadStatsParams): Promise<Pi
         eq(schema.downloadEvents.eventType, 'downloaded')
       )
     )
-    .groupBy(schema.downloadEvents.sourceApp);
+    .groupBy(schema.downloadEvents.connectionId);
 
-  const colors: Record<string, string> = {
-    radarr: '#ffc107',
-    sonarr: '#3498db',
-  };
-
-  return results.map(row => ({
-    label: row.sourceApp.charAt(0).toUpperCase() + row.sourceApp.slice(1),
+  return results.map((row, index) => ({
+    label: row.connectionName ?? (row.sourceApp.charAt(0).toUpperCase() + row.sourceApp.slice(1)),
     value: Number(row.count),
-    color: colors[row.sourceApp] ?? '#888',
+    color: CONNECTION_COLORS[index % CONNECTION_COLORS.length],
   }));
 }
 

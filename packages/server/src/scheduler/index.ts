@@ -588,23 +588,23 @@ export class Scheduler {
 
     switch (conn.type) {
       case 'radarr': {
-        const collector = new RadarrCollector(conn.url, conn.apiKey);
+        const collector = new RadarrCollector(conn.url, conn.apiKey, conn.id);
         return collector.syncHistory(undefined, importMonths);
       }
       case 'sonarr': {
-        const collector = new SonarrCollector(conn.url, conn.apiKey);
+        const collector = new SonarrCollector(conn.url, conn.apiKey, conn.id);
         return collector.syncHistory(undefined, importMonths);
       }
       case 'bazarr': {
-        const collector = new BazarrCollector(conn.url, conn.apiKey);
+        const collector = new BazarrCollector(conn.url, conn.apiKey, conn.id);
         return collector.syncHistory();
       }
       case 'prowlarr': {
-        const collector = new ProwlarrCollector(conn.url, conn.apiKey);
+        const collector = new ProwlarrCollector(conn.url, conn.apiKey, conn.id);
         return collector.syncHistory(importMonths);
       }
       case 'jellyseerr': {
-        const collector = new JellyseerrCollector(conn.url, conn.apiKey);
+        const collector = new JellyseerrCollector(conn.url, conn.apiKey, conn.id);
         return collector.syncRequests();
       }
       default:
@@ -620,12 +620,12 @@ export class Scheduler {
 
     switch (conn.type) {
       case 'radarr': {
-        const collector = new RadarrCollector(conn.url, conn.apiKey);
+        const collector = new RadarrCollector(conn.url, conn.apiKey, conn.id);
         const r = await collector.syncMovies();
         return { synced: r.added + r.updated, errors: r.errors };
       }
       case 'sonarr': {
-        const collector = new SonarrCollector(conn.url, conn.apiKey);
+        const collector = new SonarrCollector(conn.url, conn.apiKey, conn.id);
         const r = await collector.syncSeries();
         return { synced: r.added + r.updated, errors: r.errors };
       }
@@ -638,7 +638,7 @@ export class Scheduler {
     conn: schema.ServiceConnection
   ): Promise<{ processed: number }> {
     const { ProwlarrCollector } = await import('../collectors/prowlarr.collector.js');
-    const collector = new ProwlarrCollector(conn.url, conn.apiKey);
+    const collector = new ProwlarrCollector(conn.url, conn.apiKey, conn.id);
     return collector.syncIndexerStats();
   }
 
@@ -646,7 +646,7 @@ export class Scheduler {
     conn: schema.ServiceConnection
   ): Promise<{ processed: number }> {
     const { EmbyCollector } = await import('../collectors/emby.collector.js');
-    const collector = new EmbyCollector(conn.url, conn.apiKey, conn.type === 'jellyfin');
+    const collector = new EmbyCollector(conn.url, conn.apiKey, conn.id, conn.type === 'jellyfin');
 
     const sessions = await collector.syncPlaybackFromSessions();
     const played = await collector.syncPlayedItems();

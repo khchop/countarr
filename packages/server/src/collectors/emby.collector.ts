@@ -8,10 +8,12 @@ const MIN_PLAYBACK_SECONDS = 60;
 export class EmbyCollector {
   private client: EmbyClient;
   private sourceApp: 'emby' | 'jellyfin';
+  private connectionId: number;
   private userCache: Map<string, string> = new Map(); // userId -> userName
 
-  constructor(url: string, apiKey: string, isJellyfin = false) {
+  constructor(url: string, apiKey: string, connectionId: number, isJellyfin = false) {
     this.sourceApp = isJellyfin ? 'jellyfin' : 'emby';
+    this.connectionId = connectionId;
     this.client = new EmbyClient({
       baseUrl: url,
       apiKey,
@@ -207,6 +209,7 @@ export class EmbyCollector {
     await db.insert(schema.playbackEvents).values({
       mediaItemId: mediaItem.id,
       episodeId: null,
+      connectionId: this.connectionId,
       externalId,
       userId: stopEntry.UserId,
       userName,
@@ -313,6 +316,7 @@ export class EmbyCollector {
       await db.insert(schema.playbackEvents).values({
         mediaItemId: mediaItem.id,
         episodeId,
+        connectionId: this.connectionId,
         externalId: session.Id,
         startedAt: now,
         endedAt: null,
@@ -358,6 +362,7 @@ export class EmbyCollector {
     await db.insert(schema.playbackEvents).values({
       mediaItemId: mediaItem.id,
       episodeId,
+      connectionId: this.connectionId,
       externalId,
       userId: userId ?? null,
       userName: userName ?? null,

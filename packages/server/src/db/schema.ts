@@ -6,6 +6,7 @@ import { sqliteTable, text, integer, real, index, uniqueIndex } from 'drizzle-or
 export const mediaItems = sqliteTable('media_items', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   externalId: text('external_id').notNull(),
+  connectionId: integer('connection_id').references(() => serviceConnections.id, { onDelete: 'set null' }),
   source: text('source').notNull(), // 'radarr' | 'sonarr'
   type: text('type').notNull(), // 'movie' | 'series'
   title: text('title').notNull(),
@@ -21,11 +22,12 @@ export const mediaItems = sqliteTable('media_items', {
   genres: text('genres'), // JSON array
   metadata: text('metadata'), // JSON
 }, (table) => [
-  uniqueIndex('media_items_source_external_idx').on(table.source, table.externalId),
+  uniqueIndex('media_items_connection_external_idx').on(table.connectionId, table.externalId),
   index('media_items_tmdb_idx').on(table.tmdbId),
   index('media_items_type_idx').on(table.type),
   index('media_items_year_idx').on(table.year),
   index('media_items_source_type_idx').on(table.source, table.type),
+  index('media_items_connection_idx').on(table.connectionId),
 ]);
 
 // ============================================
@@ -53,6 +55,7 @@ export const downloadEvents = sqliteTable('download_events', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   mediaItemId: integer('media_item_id').notNull().references(() => mediaItems.id, { onDelete: 'cascade' }),
   episodeId: integer('episode_id').references(() => episodes.id, { onDelete: 'cascade' }),
+  connectionId: integer('connection_id').references(() => serviceConnections.id, { onDelete: 'set null' }),
   eventType: text('event_type').notNull(), // 'grabbed' | 'downloaded' | 'upgraded' | 'deleted' | 'imported'
   timestamp: text('timestamp').notNull(),
   sizeBytes: integer('size_bytes').notNull().default(0),
@@ -79,6 +82,8 @@ export const downloadEvents = sqliteTable('download_events', {
   index('download_events_indexer_idx').on(table.indexer),
   index('download_events_source_app_idx').on(table.sourceApp),
   index('download_events_source_app_timestamp_idx').on(table.sourceApp, table.timestamp),
+  index('download_events_connection_idx').on(table.connectionId),
+  index('download_events_connection_timestamp_idx').on(table.connectionId, table.timestamp),
 ]);
 
 // ============================================
@@ -107,6 +112,7 @@ export const playbackEvents = sqliteTable('playback_events', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   mediaItemId: integer('media_item_id').notNull().references(() => mediaItems.id, { onDelete: 'cascade' }),
   episodeId: integer('episode_id').references(() => episodes.id, { onDelete: 'cascade' }),
+  connectionId: integer('connection_id').references(() => serviceConnections.id, { onDelete: 'set null' }),
   externalId: text('external_id'), // Emby/Jellyfin item ID
   userId: text('user_id'), // Emby/Jellyfin user ID
   userName: text('user_name'), // User display name
@@ -120,6 +126,7 @@ export const playbackEvents = sqliteTable('playback_events', {
   index('playback_events_media_item_idx').on(table.mediaItemId),
   index('playback_events_started_at_idx').on(table.startedAt),
   index('playback_events_user_idx').on(table.userName),
+  index('playback_events_connection_idx').on(table.connectionId),
 ]);
 
 // ============================================
@@ -129,6 +136,7 @@ export const subtitleEvents = sqliteTable('subtitle_events', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   mediaItemId: integer('media_item_id').notNull().references(() => mediaItems.id, { onDelete: 'cascade' }),
   episodeId: integer('episode_id').references(() => episodes.id, { onDelete: 'cascade' }),
+  connectionId: integer('connection_id').references(() => serviceConnections.id, { onDelete: 'set null' }),
   language: text('language').notNull(),
   provider: text('provider').notNull(),
   timestamp: text('timestamp').notNull(),
@@ -138,6 +146,7 @@ export const subtitleEvents = sqliteTable('subtitle_events', {
   index('subtitle_events_timestamp_idx').on(table.timestamp),
   index('subtitle_events_language_idx').on(table.language),
   index('subtitle_events_provider_idx').on(table.provider),
+  index('subtitle_events_connection_idx').on(table.connectionId),
 ]);
 
 // ============================================
@@ -145,6 +154,7 @@ export const subtitleEvents = sqliteTable('subtitle_events', {
 // ============================================
 export const indexerStats = sqliteTable('indexer_stats', {
   id: integer('id').primaryKey({ autoIncrement: true }),
+  connectionId: integer('connection_id').references(() => serviceConnections.id, { onDelete: 'set null' }),
   indexerName: text('indexer_name').notNull(),
   date: text('date').notNull(),
   searches: integer('searches').notNull().default(0),
@@ -152,7 +162,8 @@ export const indexerStats = sqliteTable('indexer_stats', {
   failedGrabs: integer('failed_grabs').notNull().default(0),
   avgResponseMs: integer('avg_response_ms'),
 }, (table) => [
-  uniqueIndex('indexer_stats_name_date_idx').on(table.indexerName, table.date),
+  uniqueIndex('indexer_stats_connection_name_date_idx').on(table.connectionId, table.indexerName, table.date),
+  index('indexer_stats_connection_idx').on(table.connectionId),
 ]);
 
 // ============================================
