@@ -1,20 +1,20 @@
 version: '3.8'
 
 services:
-  statsarr:
+  countarr:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    container_name: statsarr
+    container_name: countarr
     restart: unless-stopped
     ports:
       - "7474:7474"
     volumes:
-      - statsarr_data:/app/data
+      - countarr_data:/app/data
     environment:
       - NODE_ENV=production
       - PORT=7474
-      - DATABASE_PATH=/app/data/statsarr.db
+      - DATABASE_PATH=/app/data/countarr.db
       
       # Radarr (optional)
       - RADARR_URL=${RADARR_URL:-}
@@ -52,16 +52,16 @@ services:
       # Historical import
       - HISTORY_IMPORT_MONTHS=${HISTORY_IMPORT_MONTHS:-12}
     networks:
-      - statsarr_network
+      - countarr_network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.statsarr.rule=Host(`statsarr.local`)"
-      - "traefik.http.services.statsarr.loadbalancer.server.port=7474"
+      - "traefik.http.routers.countarr.rule=Host(`countarr.local`)"
+      - "traefik.http.services.countarr.loadbalancer.server.port=7474"
 
 volumes:
-  statsarr_data:
+  countarr_data:
     driver: local
 
 networks:
-  statsarr_network:
+  countarr_network:
     driver: bridge

@@ -48,7 +48,7 @@ COPY --from=builder /app/packages/web/dist ./packages/web/dist
 # Set environment variables
 ENV NODE_ENV=production
 ENV PORT=7474
-ENV DATABASE_PATH=/app/data/statsarr.db
+ENV DATABASE_PATH=/app/data/countarr.db
 
 # Expose port
 EXPOSE 7474

@@ -1,4 +1,4 @@
-# Statsarr
+# Countarr
 
 A beautiful, Grafana-inspired statistics dashboard for your media server stack. Track downloads, quality upgrades, playback activity, and more from Radarr, Sonarr, Bazarr, Prowlarr, Jellyseerr, and Emby/Jellyfin.
 
@@ -67,8 +67,8 @@ docker-compose up -d
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/your-repo/statsarr.git
-cd statsarr
+git clone https://github.com/khchop/countarr.git
+cd countarr
 ```
 
 2. Install dependencies:
@@ -115,7 +115,7 @@ Only minimal server configuration uses environment variables:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `PORT` | Server port | `7474` |
-| `DATABASE_PATH` | SQLite database path | `./data/statsarr.db` |
+| `DATABASE_PATH` | SQLite database path | `./data/countarr.db` |
 
 ### Getting API Keys
 
@@ -136,7 +136,7 @@ Only minimal server configuration uses environment variables:
 ## Project Structure
 
 ```
-statsarr/
+countarr/
 ├── docker/              # Docker configuration
 ├── packages/
 │   ├── server/          # Backend API
