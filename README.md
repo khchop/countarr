@@ -49,48 +49,65 @@ A beautiful, Grafana-inspired statistics dashboard for your media server stack. 
 
 ## Quick Start
 
-### Docker Compose (Recommended)
-
-1. Start the container:
+### Docker (Recommended)
 
 ```bash
-cd docker
+docker run -d \
+  --name countarr \
+  -p 7474:7474 \
+  -v countarr_data:/app/data \
+  --restart unless-stopped \
+  ghcr.io/khchop/countarr:latest
+```
+
+Or with Docker Compose, create a `docker-compose.yml`:
+
+```yaml
+version: '3.8'
+services:
+  countarr:
+    image: ghcr.io/khchop/countarr:latest
+    container_name: countarr
+    restart: unless-stopped
+    ports:
+      - "7474:7474"
+    volumes:
+      - countarr_data:/app/data
+
+volumes:
+  countarr_data:
+```
+
+Then run:
+```bash
 docker-compose up -d
 ```
 
-2. Access the dashboard at `http://localhost:7474`
+Access the dashboard at `http://localhost:7474` and follow the setup wizard.
 
-3. Follow the on-screen setup wizard to connect your services
+### Unraid
 
-### Manual Installation
+1. Go to **Docker** > **Add Container**
+2. Set the following:
+   - **Repository**: `ghcr.io/khchop/countarr:latest`
+   - **Port**: `7474` -> `7474`
+   - **Path**: `/app/data` -> `/mnt/user/appdata/countarr`
+3. Click **Apply**
 
-1. Clone the repository:
+### Manual Installation (Development)
 
 ```bash
 git clone https://github.com/khchop/countarr.git
 cd countarr
-```
-
-2. Install dependencies:
-
-```bash
 pnpm install
-```
-
-3. Start development server:
-
-```bash
 pnpm dev
 ```
 
-4. For production:
-
+For production:
 ```bash
 pnpm build
 pnpm start
 ```
-
-5. Open `http://localhost:7474` and follow the setup wizard
 
 ## Configuration
 

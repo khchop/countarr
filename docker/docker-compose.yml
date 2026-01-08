@@ -2,9 +2,11 @@ version: '3.8'
 
 services:
   countarr:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
+    image: ghcr.io/khchop/countarr:latest
+    # To build from source instead, comment out 'image' above and uncomment:
+    # build:
+    #   context: ..
+    #   dockerfile: docker/Dockerfile
     container_name: countarr
     restart: unless-stopped
     ports:
@@ -15,53 +17,7 @@ services:
       - NODE_ENV=production
       - PORT=7474
       - DATABASE_PATH=/app/data/countarr.db
-      
-      # Radarr (optional)
-      - RADARR_URL=${RADARR_URL:-}
-      - RADARR_API_KEY=${RADARR_API_KEY:-}
-      
-      # Sonarr (optional)
-      - SONARR_URL=${SONARR_URL:-}
-      - SONARR_API_KEY=${SONARR_API_KEY:-}
-      
-      # Bazarr (optional)
-      - BAZARR_URL=${BAZARR_URL:-}
-      - BAZARR_API_KEY=${BAZARR_API_KEY:-}
-      
-      # Prowlarr (optional)
-      - PROWLARR_URL=${PROWLARR_URL:-}
-      - PROWLARR_API_KEY=${PROWLARR_API_KEY:-}
-      
-      # Jellyseerr (optional)
-      - JELLYSEERR_URL=${JELLYSEERR_URL:-}
-      - JELLYSEERR_API_KEY=${JELLYSEERR_API_KEY:-}
-      
-      # Emby (optional)
-      - EMBY_URL=${EMBY_URL:-}
-      - EMBY_API_KEY=${EMBY_API_KEY:-}
-      
-      # Jellyfin (optional)
-      - JELLYFIN_URL=${JELLYFIN_URL:-}
-      - JELLYFIN_API_KEY=${JELLYFIN_API_KEY:-}
-      
-      # Polling intervals (in minutes)
-      - POLL_INTERVAL_HISTORY=${POLL_INTERVAL_HISTORY:-5}
-      - POLL_INTERVAL_METADATA=${POLL_INTERVAL_METADATA:-30}
-      - POLL_INTERVAL_PLAYBACK=${POLL_INTERVAL_PLAYBACK:-1}
-      
-      # Historical import
-      - HISTORY_IMPORT_MONTHS=${HISTORY_IMPORT_MONTHS:-12}
-    networks:
-      - countarr_network
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.countarr.rule=Host(`countarr.local`)"
-      - "traefik.http.services.countarr.loadbalancer.server.port=7474"
 
 volumes:
   countarr_data:
     driver: local
-
-networks:
-  countarr_network:
-    driver: bridge
