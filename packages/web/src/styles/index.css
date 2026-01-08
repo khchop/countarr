@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #181b1f;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3a3f47;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4a4f57;
+}
+
+/* Base styles */
+body {
+  overflow-y: scroll;
+}
+
+/* Panel animations */
+.panel {
+  @apply bg-panel rounded-lg border border-border;
+  transition: border-color 0.2s ease;
+}
+
+.panel:hover {
+  @apply border-border-hover;
+}
+
+/* Stat number animation */
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stat-value {
+  animation: countUp 0.3s ease-out;
+}
+
+/* Chart tooltip styling */
+.echarts-tooltip {
+  @apply !bg-background-secondary !border-border !rounded-lg !shadow-xl;
+}
+
+/* Loading skeleton */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #1f2229 25%,
+    #2a2e33 50%,
+    #1f2229 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Table styles */
+.data-table {
+  @apply w-full text-sm;
+}
+
+.data-table th {
+  @apply text-left text-text-muted font-medium px-3 py-2 border-b border-border;
+}
+
+.data-table td {
+  @apply px-3 py-2 border-b border-border/50;
+}
+
+.data-table tr:hover td {
+  @apply bg-panel-hover;
+}
+
+/* Responsive grid */
+.dashboard-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+@media (min-width: 1200px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Time range selector */
+.time-range-btn {
+  @apply px-3 py-1.5 text-sm text-text-muted hover:text-text hover:bg-background-tertiary rounded transition-colors;
+}
+
+.time-range-btn.active {
+  @apply bg-accent-blue text-white;
+}

@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  statsarr:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: statsarr
+    restart: unless-stopped
+    ports:
+      - "7474:7474"
+    volumes:
+      - statsarr_data:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=7474
+      - DATABASE_PATH=/app/data/statsarr.db
+      
+      # Radarr (optional)
+      - RADARR_URL=${RADARR_URL:-}
+      - RADARR_API_KEY=${RADARR_API_KEY:-}
+      
+      # Sonarr (optional)
+      - SONARR_URL=${SONARR_URL:-}
+      - SONARR_API_KEY=${SONARR_API_KEY:-}
+      
+      # Bazarr (optional)
+      - BAZARR_URL=${BAZARR_URL:-}
+      - BAZARR_API_KEY=${BAZARR_API_KEY:-}
+      
+      # Prowlarr (optional)
+      - PROWLARR_URL=${PROWLARR_URL:-}
+      - PROWLARR_API_KEY=${PROWLARR_API_KEY:-}
+      
+      # Jellyseerr (optional)
+      - JELLYSEERR_URL=${JELLYSEERR_URL:-}
+      - JELLYSEERR_API_KEY=${JELLYSEERR_API_KEY:-}
+      
+      # Emby (optional)
+      - EMBY_URL=${EMBY_URL:-}
+      - EMBY_API_KEY=${EMBY_API_KEY:-}
+      
+      # Jellyfin (optional)
+      - JELLYFIN_URL=${JELLYFIN_URL:-}
+      - JELLYFIN_API_KEY=${JELLYFIN_API_KEY:-}
+      
+      # Polling intervals (in minutes)
+      - POLL_INTERVAL_HISTORY=${POLL_INTERVAL_HISTORY:-5}
+      - POLL_INTERVAL_METADATA=${POLL_INTERVAL_METADATA:-30}
+      - POLL_INTERVAL_PLAYBACK=${POLL_INTERVAL_PLAYBACK:-1}
+      
+      # Historical import
+      - HISTORY_IMPORT_MONTHS=${HISTORY_IMPORT_MONTHS:-12}
+    networks:
+      - statsarr_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.statsarr.rule=Host(`statsarr.local`)"
+      - "traefik.http.services.statsarr.loadbalancer.server.port=7474"
+
+volumes:
+  statsarr_data:
+    driver: local
+
+networks:
+  statsarr_network:
+    driver: bridge
