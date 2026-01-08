@@ -2,7 +2,7 @@
 
 A beautiful, Grafana-inspired statistics dashboard for your media server stack. Track downloads, quality upgrades, playback activity, and more from Radarr, Sonarr, Bazarr, Prowlarr, Jellyseerr, and Emby/Jellyfin.
 
-![Dashboard Preview](docs/dashboard-preview.png)
+
 
 ## Features
 
