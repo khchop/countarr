@@ -7,7 +7,7 @@ WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@9.15.1 --activate
 
 # Copy package files
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/server/package.json ./packages/server/
 COPY packages/web/package.json ./packages/web/
@@ -21,28 +21,27 @@ COPY . .
 # Build all packages
 RUN pnpm build
 
+# Prune dev dependencies
+RUN pnpm prune --prod
+
 # Production stage
 FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@9.15.1 --activate
-
 # Create data directory
 RUN mkdir -p /app/data
 
-# Copy package files
-COPY package.json pnpm-workspace.yaml ./
-COPY packages/shared/package.json ./packages/shared/
-COPY packages/server/package.json ./packages/server/
-
-# Install production dependencies only
-RUN pnpm install --prod --frozen-lockfile
-
-# Copy built files
+# Copy everything needed from builder
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/pnpm-workspace.yaml ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY --from=builder /app/packages/server/package.json ./packages/server/
 COPY --from=builder /app/packages/server/dist ./packages/server/dist
+COPY --from=builder /app/packages/server/node_modules ./packages/server/node_modules
 COPY --from=builder /app/packages/web/dist ./packages/web/dist
 
 # Set environment variables
